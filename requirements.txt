@@ -1,1 +1,0 @@
-# Placeholder requirements.txt - add dependencies manually
