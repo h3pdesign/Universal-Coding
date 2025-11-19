@@ -56,6 +56,10 @@ def fetch_raindrops_to_tag() -> Dict[int, Dict[str, Any]]:
 
     Returns:
         Dict[int, Dict[str, Any]]: Dictionary of raindrop IDs to raindrop data for items with < 3 tags
+<<<<<<< HEAD
+=======
+    """
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
     logging.info("Fetching Raindrop articles with fewer than 3 tags...")
     all_raindrops: Dict[int, Dict[str, Any]] = {}
     page = 0
@@ -65,11 +69,20 @@ def fetch_raindrops_to_tag() -> Dict[int, Dict[str, Any]]:
             response = requests.get(RAINDROP_API_URL, headers=HEADERS, params=params, timeout=20)
             response.raise_for_status()
             data = response.json()
+<<<<<<< HEAD
             for item in data.get("items", []):
                 tags = item.get("tags", [])
                 if len(tags) < 3:
                     all_raindrops[item["_id"]] = item
             if not data.get("items") or len(data["items"]) < 50:
+=======
+            items = data.get("items", [])
+            for item in items:
+                tags = item.get("tags", [])
+                if len(tags) < 3:
+                    all_raindrops[item["_id"]] = item
+            if not items or len(items) < 50:
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
                 break
             page += 1
             time.sleep(1)
@@ -122,7 +135,10 @@ def update_raindrop_tags(raindrop: Dict[str, Any], new_tags: List[str]) -> bool:
 def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
     """
     Generate tags using xAI Grok API based on article content.
+<<<<<<< HEAD
     Falls back to simulation on API failure.
+=======
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
 
     Args:
         title: Article title
@@ -130,7 +146,11 @@ def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
         url: Article URL
 
     Returns:
+<<<<<<< HEAD
         List[str]: List of generated tags (at least 3)
+=======
+        List[str]: List of generated tags (may be empty if Grok couldn't be used)
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
     """
     content = f"{title} {excerpt}"
     tags: List[str] = []
@@ -157,6 +177,7 @@ def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
             # Robust parsing: support both 'choices' and 'output' shapes and direct text
             generated_text = ""
             if isinstance(data.get("choices"), list) and data["choices"]:
+<<<<<<< HEAD
                 # Newer shapes may contain 'message' or 'content'
                 first = data["choices"][0]
                 if isinstance(first, dict):
@@ -165,6 +186,12 @@ def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
                     )
             if not generated_text and isinstance(data.get("output"), list):
                 # Some xAI responses use an 'output' array with 'content'
+=======
+                first = data["choices"][0]
+                if isinstance(first, dict):
+                    generated_text = first.get("text") or first.get("message", {}).get("content") or ""
+            if not generated_text and isinstance(data.get("output"), list):
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
                 parts = []
                 for o in data["output"]:
                     if isinstance(o, dict):
@@ -173,12 +200,24 @@ def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
                         parts.append(o)
                 generated_text = "\n".join(p for p in parts if p)
             if not generated_text:
+<<<<<<< HEAD
                 # Fallback: check top-level text
+=======
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
                 generated_text = data.get("text", "") or data.get("result", "")
 
             generated_text = (generated_text or "").strip()
             # Split by commas or newlines and strip
+<<<<<<< HEAD
             tags = [tag.strip() for part in generated_text.splitlines() for tag in part.split(",") for tag in [tag.strip()] if tag]
+=======
+            tags = [
+                tag.strip()
+                for part in generated_text.splitlines()
+                for tag in part.split(",")
+                if (tag and tag.strip())
+            ]
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
 
             if not tags:
                 logging.warning(f"No tags generated by Grok API for '{title}'.")
@@ -187,13 +226,20 @@ def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
 
         except requests.exceptions.RequestException as e:
             logging.error(f"Grok API call failed for '{title}': {str(e)}")
+<<<<<<< HEAD
+=======
+            logging.error("Grok unavailable for this item; skipping tag generation.")
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
             time.sleep(1)
     else:
         logging.error(
             "GROK_API_KEY not found in environment variables. Cannot generate tags without Grok."
         )
 
+<<<<<<< HEAD
     # If tags couldn't be generated via Grok, return empty list and log a clear message
+=======
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
     if not tags:
         logging.error(f"No tags generated for '{title}'. Grok unavailable or failed. Skipping tagging for this item.")
         return []
@@ -217,6 +263,7 @@ def generate_fallback_tags(content: str) -> List[str]:
 
     # Determine general tags based on content keywords
     if any(
+<<<<<<< HEAD
             def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
                 """
                 Generate tags using xAI Grok API based on article content.
@@ -230,6 +277,11 @@ def generate_fallback_tags(content: str) -> List[str]:
                 Returns:
                     List[str]: List of generated tags (may be empty if Grok couldn't be used)
                 """
+=======
+        word in content_lower for word in ["technology", "software", "ai", "artificial intelligence", "computer"]
+    ):
+        general_tags.update(["technology", "software"])
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
     elif any(
         word in content_lower for word in ["finance", "economy", "money", "market"]
     ):
@@ -291,9 +343,12 @@ def tag_raindrops(raindrops: Dict[int, Dict[str, Any]]) -> int:
 
     for raindrop_id, raindrop in raindrops.items():
         current_tags = raindrop.get("tags", [])
+<<<<<<< HEAD
                 # If tags couldn't be generated via Grok, return empty list and log a clear message
             continue
 
+=======
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
         title = raindrop.get("title", "")
         excerpt = raindrop.get("excerpt", "")
 
@@ -301,8 +356,18 @@ def tag_raindrops(raindrops: Dict[int, Dict[str, Any]]) -> int:
 
         new_tags = generate_tags_with_grok(title, excerpt, raindrop.get("link", ""))
 
+<<<<<<< HEAD
         # Merge with existing tags, ensure at least 3 unique
         final_tags = list(set(current_tags + new_tags))
+=======
+        # If Grok couldn't be used or returned no tags, skip and log
+        if not new_tags:
+            logging.error(f"Grok unavailable or returned no tags for '{title}'. Skipping this item.")
+            continue
+
+        # Merge with existing tags, preserve order and ensure uniqueness
+        final_tags = list(dict.fromkeys((current_tags or []) + new_tags))
+>>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
         while len(final_tags) < 3:
             final_tags.append("content")
 
