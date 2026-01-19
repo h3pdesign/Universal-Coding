@@ -14,7 +14,7 @@ def generate_requirements(project_path: str) -> None:
         )
         try:
             # Ignore virtual environment and problematic directories
-            ignore_dirs = ".venv312"
+            ignore_dirs = ".venv313,.venv,.env,__pycache__,tests"
             subprocess.run(["pipreqs", project_path, "--force", "--ignore", ignore_dirs], check=True)
             print("Generated requirements.txt")
         except subprocess.CalledProcessError:

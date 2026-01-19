@@ -1,0 +1,26 @@
+
+# Pfade definieren
+$BasePath = "C:\Workspace\Python_Runtime\Envs"
+$EnvName = "PyDataEnv"
+$ProjectFolder = "PyDataProject"
+
+# Basisordner erstellen, falls nicht vorhanden
+if (!(Test-Path $BasePath)) {
+    New-Item -ItemType Directory -Path $BasePath
+}
+
+# In den Basisordner wechseln
+Set-Location $BasePath
+
+# Virtuelle Umgebung erstellen
+python -m venv $EnvName
+
+# Projektordner innerhalb der Umgebung erstellen
+$ProjectPath = Join-Path $BasePath\$EnvName $ProjectFolder
+New-Item -ItemType Directory -Path $ProjectPath
+
+# Umgebung aktivieren
+& "$BasePath\$EnvName\Scripts\activate"
+
+Write-Host "Virtuelle Umgebung '$EnvName' wurde erstellt und aktiviert."
+Write-Host "Projektordner: $ProjectPath"
