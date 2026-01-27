@@ -5,9 +5,12 @@ import asyncio
 import threading
 from apple_calendar_agent import launch_agent
 
+
 class CalendarAgentApp(rumps.App):
     def __init__(self):
-        super().__init__("HP Calendar Agent", icon="icon.png", menu=["Show Summary", "Refresh"])
+        super().__init__(
+            "HP Calendar Agent", icon="icon.png", menu=["Show Summary", "Refresh"]
+        )
         self.summary = "Calendar agent not yet run."
 
     @rumps.clicked("Show Summary")
@@ -28,7 +31,9 @@ class CalendarAgentApp(rumps.App):
             loop = asyncio.get_event_loop()
             summary = loop.run_until_complete(launch_agent())
             self.summary = summary
+
         threading.Thread(target=runner).start()
+
 
 if __name__ == "__main__":
     CalendarAgentApp().run()

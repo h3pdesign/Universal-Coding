@@ -97,7 +97,7 @@ class SVG2PDFPreprocessor(ConvertFiguresPreprocessor):
         command.append("{from_filename}")
         return command
 
-    inkscape = Unicode(help="The path to Inkscape, if necessary").tag(config=True)    
+    inkscape = Unicode(help="The path to Inkscape, if necessary").tag(config=True)
 
     @default("inkscape")
     def _inkscape_default(self):
@@ -114,14 +114,16 @@ class SVG2PDFPreprocessor(ConvertFiguresPreprocessor):
         if sys.platform == "win32":
             wr_handle = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
             try:
-                rkey = winreg.OpenKey(wr_handle, "SOFTWARE\\Classes\\inkscape.svg\\DefaultIcon")
+                rkey = winreg.OpenKey(
+                    wr_handle, "SOFTWARE\\Classes\\inkscape.svg\\DefaultIcon"
+                )
                 inkscape = winreg.QueryValueEx(rkey, "")[0]
             except FileNotFoundError:
                 msg = "Inkscape executable not found"
                 raise FileNotFoundError(msg) from None
             return inkscape
         return "inkscape"
-    
+
     def convert_figure(self, data_format, data):
         """
         Convert a single SVG figure to PDF.  Returns converted data.
@@ -138,9 +140,14 @@ class SVG2PDFPreprocessor(ConvertFiguresPreprocessor):
             # Call conversion application
             output_filename = os.path.join(tmpdir, "figure.pdf")
 
-            template_vars = {"from_filename": input_filename, "to_filename": output_filename}
+            template_vars = {
+                "from_filename": input_filename,
+                "to_filename": output_filename,
+            }
             if isinstance(self.command, list):
-                full_cmd = [s.format_map(FormatSafeDict(**template_vars)) for s in self.command]
+                full_cmd = [
+                    s.format_map(FormatSafeDict(**template_vars)) for s in self.command
+                ]
             else:
                 # For backwards compatibility with specifying strings
                 # Okay-ish, since the string is trusted

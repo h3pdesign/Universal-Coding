@@ -97,15 +97,20 @@ class SVG2PDFPreprocessor(ConvertFiguresPreprocessor):
         command.append("{from_filename}")
         return command
 
-    inkscape = Unicode(help="The path to Inkscape, if necessary").tag(config=True)    
+    inkscape = Unicode(help="The path to Inkscape, if necessary").tag(config=True)
+
     @default("inkscape")
     def _inkscape_default(self):
         # Windows: Secure registry lookup FIRST (CVE-2025-53000 fix)
         if sys.platform == "win32":
             wr_handle = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
             try:
-                rkey = winreg.OpenKey(wr_handle, r"SOFTWARE\Classes\inkscape.svg\DefaultIcon")
-                inkscape_full = winreg.QueryValueEx(rkey, "")[0].split(",")[0]  # Fix: remove ",0"
+                rkey = winreg.OpenKey(
+                    wr_handle, r"SOFTWARE\Classes\inkscape.svg\DefaultIcon"
+                )
+                inkscape_full = winreg.QueryValueEx(rkey, "")[0].split(",")[
+                    0
+                ]  # Fix: remove ",0"
                 if os.path.isfile(inkscape_full):
                     return inkscape_full
             except (FileNotFoundError, OSError, IndexError):
@@ -132,7 +137,7 @@ class SVG2PDFPreprocessor(ConvertFiguresPreprocessor):
                 return INKSCAPE_APP
 
         raise FileNotFoundError("Inkscape executable not found in safe paths")
-    
+
     def convert_figure(self, data_format, data):
         """
         Convert a single SVG figure to PDF.  Returns converted data.
@@ -149,9 +154,14 @@ class SVG2PDFPreprocessor(ConvertFiguresPreprocessor):
             # Call conversion application
             output_filename = os.path.join(tmpdir, "figure.pdf")
 
-            template_vars = {"from_filename": input_filename, "to_filename": output_filename}
+            template_vars = {
+                "from_filename": input_filename,
+                "to_filename": output_filename,
+            }
             if isinstance(self.command, list):
-                full_cmd = [s.format_map(FormatSafeDict(**template_vars)) for s in self.command]
+                full_cmd = [
+                    s.format_map(FormatSafeDict(**template_vars)) for s in self.command
+                ]
             else:
                 # For backwards compatibility with specifying strings
                 # Okay-ish, since the string is trusted
