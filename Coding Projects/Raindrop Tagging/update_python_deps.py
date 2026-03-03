@@ -15,7 +15,10 @@ def generate_requirements(project_path: str) -> None:
         try:
             # Ignore virtual environment and problematic directories
             ignore_dirs = ".venv313,.venv,.env,__pycache__,tests"
-            subprocess.run(["pipreqs", project_path, "--force", "--ignore", ignore_dirs], check=True)
+            subprocess.run(
+                ["pipreqs", project_path, "--force", "--ignore", ignore_dirs],
+                check=True,
+            )
             print("Generated requirements.txt")
         except subprocess.CalledProcessError:
             print(
@@ -23,8 +26,10 @@ def generate_requirements(project_path: str) -> None:
             )
             print("Continuing without generating requirements.txt...")
             if not req_file.exists():
-                with open(req_file, 'w') as f:
-                    f.write("# Placeholder requirements.txt - add dependencies manually\n")
+                with open(req_file, "w") as f:
+                    f.write(
+                        "# Placeholder requirements.txt - add dependencies manually\n"
+                    )
                 print("Created placeholder requirements.txt")
     else:
         print(f"Found existing requirements.txt in {project_path}")

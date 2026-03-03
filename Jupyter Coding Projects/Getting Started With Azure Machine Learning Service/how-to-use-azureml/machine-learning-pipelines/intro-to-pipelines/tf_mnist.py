@@ -12,26 +12,50 @@ from utils import load_data
 print("TensorFlow version:", tf.VERSION)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data-folder', type=str, dest='data_folder', help='data folder mounting point')
-parser.add_argument('--batch-size', type=int, dest='batch_size', default=50, help='mini batch size for training')
-parser.add_argument('--first-layer-neurons', type=int, dest='n_hidden_1', default=100,
-                    help='# of neurons in the first layer')
-parser.add_argument('--second-layer-neurons', type=int, dest='n_hidden_2', default=100,
-                    help='# of neurons in the second layer')
-parser.add_argument('--learning-rate', type=float, dest='learning_rate', default=0.01, help='learning rate')
+parser.add_argument(
+    "--data-folder", type=str, dest="data_folder", help="data folder mounting point"
+)
+parser.add_argument(
+    "--batch-size",
+    type=int,
+    dest="batch_size",
+    default=50,
+    help="mini batch size for training",
+)
+parser.add_argument(
+    "--first-layer-neurons",
+    type=int,
+    dest="n_hidden_1",
+    default=100,
+    help="# of neurons in the first layer",
+)
+parser.add_argument(
+    "--second-layer-neurons",
+    type=int,
+    dest="n_hidden_2",
+    default=100,
+    help="# of neurons in the second layer",
+)
+parser.add_argument(
+    "--learning-rate",
+    type=float,
+    dest="learning_rate",
+    default=0.01,
+    help="learning rate",
+)
 args = parser.parse_args()
 
-data_folder = os.path.join(args.data_folder, 'mnist')
+data_folder = os.path.join(args.data_folder, "mnist")
 
-print('training dataset is stored here:', data_folder)
+print("training dataset is stored here:", data_folder)
 
-X_train = load_data(os.path.join(data_folder, 'train-images.gz'), False) / 255.0
-X_test = load_data(os.path.join(data_folder, 'test-images.gz'), False) / 255.0
+X_train = load_data(os.path.join(data_folder, "train-images.gz"), False) / 255.0
+X_test = load_data(os.path.join(data_folder, "test-images.gz"), False) / 255.0
 
-y_train = load_data(os.path.join(data_folder, 'train-labels.gz'), True).reshape(-1)
-y_test = load_data(os.path.join(data_folder, 'test-labels.gz'), True).reshape(-1)
+y_train = load_data(os.path.join(data_folder, "train-labels.gz"), True).reshape(-1)
+y_test = load_data(os.path.join(data_folder, "test-labels.gz"), True).reshape(-1)
 
-print(X_train.shape, y_train.shape, X_test.shape, y_test.shape, sep='\n')
+print(X_train.shape, y_train.shape, X_test.shape, y_test.shape, sep="\n")
 training_set_size = X_train.shape[0]
 
 n_inputs = 28 * 28
@@ -42,21 +66,23 @@ learning_rate = args.learning_rate
 n_epochs = 50
 batch_size = args.batch_size
 
-with tf.name_scope('network'):
+with tf.name_scope("network"):
     # construct the DNN
-    X = tf.placeholder(tf.float32, shape=(None, n_inputs), name='X')
-    y = tf.placeholder(tf.int64, shape=(None), name='y')
-    h1 = tf.layers.dense(X, n_h1, activation=tf.nn.relu, name='h1')
-    h2 = tf.layers.dense(h1, n_h2, activation=tf.nn.relu, name='h2')
-    output = tf.layers.dense(h2, n_outputs, name='output')
+    X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
+    y = tf.placeholder(tf.int64, shape=(None), name="y")
+    h1 = tf.layers.dense(X, n_h1, activation=tf.nn.relu, name="h1")
+    h2 = tf.layers.dense(h1, n_h2, activation=tf.nn.relu, name="h2")
+    output = tf.layers.dense(h2, n_outputs, name="output")
 
-with tf.name_scope('train'):
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=output)
-    loss = tf.reduce_mean(cross_entropy, name='loss')
+with tf.name_scope("train"):
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        labels=y, logits=output
+    )
+    loss = tf.reduce_mean(cross_entropy, name="loss")
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train_op = optimizer.minimize(loss)
 
-with tf.name_scope('eval'):
+with tf.name_scope("eval"):
     correct = tf.nn.in_top_k(output, y, 1)
     acc_op = tf.reduce_mean(tf.cast(correct, tf.float32))
 
@@ -80,7 +106,7 @@ with tf.Session() as sess:
         b_end = b_start + batch_size
         for _ in range(training_set_size // batch_size):
             # get a batch
-            X_batch, y_batch = X_train[b_start: b_end], y_train[b_start: b_end]
+            X_batch, y_batch = X_train[b_start:b_end], y_train[b_start:b_end]
 
             # update batch index for the next batch
             b_start = b_start + batch_size
@@ -94,13 +120,19 @@ with tf.Session() as sess:
         acc_val = acc_op.eval(feed_dict={X: X_test, y: y_test})
 
         # log accuracies
-        run.log('training_acc', np.float(acc_train))
-        run.log('validation_acc', np.float(acc_val))
-        print(epoch, '-- Training accuracy:', acc_train, '\b Validation accuracy:', acc_val)
+        run.log("training_acc", np.float(acc_train))
+        run.log("validation_acc", np.float(acc_val))
+        print(
+            epoch,
+            "-- Training accuracy:",
+            acc_train,
+            "\b Validation accuracy:",
+            acc_val,
+        )
         y_hat = np.argmax(output.eval(feed_dict={X: X_test}), axis=1)
 
-    run.log('final_acc', np.float(acc_val))
+    run.log("final_acc", np.float(acc_val))
 
-    os.makedirs('./outputs/model', exist_ok=True)
+    os.makedirs("./outputs/model", exist_ok=True)
     # files saved in the "./outputs" folder are automatically uploaded into run history
-    saver.save(sess, './outputs/model/mnist-tf.model')
+    saver.save(sess, "./outputs/model/mnist-tf.model")

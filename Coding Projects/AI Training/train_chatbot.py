@@ -5,7 +5,12 @@ import fitz  # PyMuPDF
 import re
 from bs4 import BeautifulSoup
 import pandas as pd
-from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering, Trainer, TrainingArguments
+from transformers import (
+    DistilBertTokenizer,
+    DistilBertForQuestionAnswering,
+    Trainer,
+    TrainingArguments,
+)
 import torch
 from pathlib import Path
 
@@ -13,19 +18,21 @@ from pathlib import Path
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print(f"Using device: {device}")
 
+
 # Function to extract text from EPUB
 def extract_epub_text(epub_path):
     try:
         book = epub.read_epub(epub_path)
         text = ""
         for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
-            content = item.get_content().decode('utf-8')
-            soup = BeautifulSoup(content, 'html.parser')
-            text += soup.get_text(separator=' ', strip=True) + "\n"
+            content = item.get_content().decode("utf-8")
+            soup = BeautifulSoup(content, "html.parser")
+            text += soup.get_text(separator=" ", strip=True) + "\n"
         return text
     except Exception as e:
         print(f"Error processing EPUB {epub_path}: {e}")
         return ""
+
 
 # Function to extract text from PDF
 def extract_pdf_text(pdf_path):
@@ -40,11 +47,13 @@ def extract_pdf_text(pdf_path):
         print(f"Error processing PDF {pdf_path}: {e}")
         return ""
 
+
 # Clean text
 def clean_text(text):
-    text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
-    text = re.sub(r'[^\w\s.,!?]', '', text)  # Remove special characters
+    text = re.sub(r"\s+", " ", text)  # Normalize whitespace
+    text = re.sub(r"[^\w\s.,!?]", "", text)  # Remove special characters
     return text.strip()
+
 
 # Process eBooks in a directory
 def process_ebooks(directory, max_books=1000):
@@ -62,6 +71,7 @@ def process_ebooks(directory, max_books=1000):
             break
     return texts
 
+
 # Generate synthetic Q&A pairs (simplified example)
 def generate_qa_pairs(texts, num_questions=100):
     # Placeholder: Generate Q&A pairs manually or use a model like T5
@@ -73,6 +83,7 @@ def generate_qa_pairs(texts, num_questions=100):
         answer = context[:100]  # Dummy answer
         qa_pairs.append({"context": context, "question": question, "answer": answer})
     return qa_pairs
+
 
 # Prepare dataset for fine-tuning
 class QADataset(torch.utils.data.Dataset):
@@ -104,6 +115,7 @@ class QADataset(torch.utils.data.Dataset):
             "end_positions": end_positions,
         }
 
+
 # Main function
 def main():
     # Directory containing eBooks
@@ -121,7 +133,9 @@ def main():
 
     # Initialize tokenizer and model
     tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
-    model = DistilBertForQuestionAnswering.from_pretrained("distilbert-base-uncased").to(device)
+    model = DistilBertForQuestionAnswering.from_pretrained(
+        "distilbert-base-uncased"
+    ).to(device)
 
     # Create dataset
     dataset = QADataset(qa_pairs, tokenizer)
@@ -164,9 +178,10 @@ def main():
         outputs = model(**inputs)
     start_idx = outputs.start_logits.argmax()
     end_idx = outputs.end_logits.argmax()
-    answer = tokenizer.decode(inputs["input_ids"][0][start_idx:end_idx+1])
+    answer = tokenizer.decode(inputs["input_ids"][0][start_idx : end_idx + 1])
     print(f"Question: {question}")
     print(f"Answer: {answer}")
+
 
 if __name__ == "__main__":
     main()

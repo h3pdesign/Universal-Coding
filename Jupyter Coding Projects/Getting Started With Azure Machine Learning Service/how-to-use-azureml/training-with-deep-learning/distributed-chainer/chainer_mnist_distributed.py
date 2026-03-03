@@ -1,4 +1,3 @@
-
 import argparse
 
 import chainer
@@ -18,8 +17,7 @@ chainer.disable_experimental_feature_warning = True
 
 class MLP0SubA(chainer.Chain):
     def __init__(self, comm, n_out):
-        super(MLP0SubA, self).__init__(
-            l1=L.Linear(784, n_out))
+        super(MLP0SubA, self).__init__(l1=L.Linear(784, n_out))
 
     def __call__(self, x):
         return F.relu(self.l1(x))
@@ -44,8 +42,8 @@ class MLP0(chainermn.MultiNodeChainList):
 class MLP1Sub(chainer.Chain):
     def __init__(self, n_units, n_out):
         super(MLP1Sub, self).__init__(
-            l2=L.Linear(None, n_units),
-            l3=L.Linear(None, n_out))
+            l2=L.Linear(None, n_units), l3=L.Linear(None, n_out)
+        )
 
     def __call__(self, h0):
         h1 = F.relu(self.l2(h0))
@@ -61,28 +59,38 @@ class MLP1(chainermn.MultiNodeChainList):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='ChainerMN example: pipelined neural network')
-    parser.add_argument('--batchsize', '-b', type=int, default=100,
-                        help='Number of images in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=20,
-                        help='Number of sweeps over the dataset to train')
-    parser.add_argument('--gpu', '-g', action='store_true',
-                        help='Use GPU')
-    parser.add_argument('--out', '-o', default='result',
-                        help='Directory to output the result')
-    parser.add_argument('--unit', '-u', type=int, default=1000,
-                        help='Number of units')
+        description="ChainerMN example: pipelined neural network"
+    )
+    parser.add_argument(
+        "--batchsize",
+        "-b",
+        type=int,
+        default=100,
+        help="Number of images in each mini-batch",
+    )
+    parser.add_argument(
+        "--epoch",
+        "-e",
+        type=int,
+        default=20,
+        help="Number of sweeps over the dataset to train",
+    )
+    parser.add_argument("--gpu", "-g", action="store_true", help="Use GPU")
+    parser.add_argument(
+        "--out", "-o", default="result", help="Directory to output the result"
+    )
+    parser.add_argument("--unit", "-u", type=int, default=1000, help="Number of units")
     args = parser.parse_args()
 
     # Prepare ChainerMN communicator.
     if args.gpu:
-        comm = chainermn.create_communicator('hierarchical')
+        comm = chainermn.create_communicator("hierarchical")
         data_axis, model_axis = comm.rank % 2, comm.rank // 2
         data_comm = comm.split(data_axis, comm.rank)
         model_comm = comm.split(model_axis, comm.rank)
         device = comm.intra_rank
     else:
-        comm = chainermn.create_communicator('naive')
+        comm = chainermn.create_communicator("naive")
         data_axis, model_axis = comm.rank % 2, comm.rank // 2
         data_comm = comm.split(data_axis, comm.rank)
         model_comm = comm.split(model_axis, comm.rank)
@@ -90,17 +98,17 @@ def main():
 
     if model_comm.size != 2:
         raise ValueError(
-            'This example can only be executed on the even number'
-            'of processes.')
+            "This example can only be executed on the even number" "of processes."
+        )
 
     if comm.rank == 0:
-        print('==========================================')
+        print("==========================================")
         if args.gpu:
-            print('Using GPUs')
-        print('Num unit: {}'.format(args.unit))
-        print('Num Minibatch-size: {}'.format(args.batchsize))
-        print('Num epoch: {}'.format(args.epoch))
-        print('==========================================')
+            print("Using GPUs")
+        print("Num unit: {}".format(args.unit))
+        print("Num Minibatch-size: {}".format(args.batchsize))
+        print("Num epoch: {}".format(args.epoch))
+        print("==========================================")
 
     if data_axis == 0:
         model = L.Classifier(MLP0(model_comm, args.unit))
@@ -112,7 +120,8 @@ def main():
         model.to_gpu()
 
     optimizer = chainermn.create_multi_node_optimizer(
-        chainer.optimizers.Adam(), data_comm)
+        chainer.optimizers.Adam(), data_comm
+    )
     optimizer.setup(model)
 
     # Original dataset on worker 0 and 1.
@@ -127,13 +136,13 @@ def main():
     train = chainermn.scatter_dataset(train, data_comm, shuffle=True)
     test = chainermn.scatter_dataset(test, data_comm, shuffle=True)
 
-    train_iter = chainer.iterators.SerialIterator(
-        train, args.batchsize, shuffle=False)
+    train_iter = chainer.iterators.SerialIterator(train, args.batchsize, shuffle=False)
     test_iter = chainer.iterators.SerialIterator(
-        test, args.batchsize, repeat=False, shuffle=False)
+        test, args.batchsize, repeat=False, shuffle=False
+    )
 
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
-    trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
+    trainer = training.Trainer(updater, (args.epoch, "epoch"), out=args.out)
     evaluator = extensions.Evaluator(test_iter, model, device=device)
     evaluator = chainermn.create_multi_node_evaluator(evaluator, data_comm)
     trainer.extend(evaluator)
@@ -141,13 +150,22 @@ def main():
     # Some display and output extentions are necessary only for worker 0.
     if comm.rank == 0:
         trainer.extend(extensions.LogReport())
-        trainer.extend(extensions.PrintReport(
-            ['epoch', 'main/loss', 'validation/main/loss',
-             'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
+        trainer.extend(
+            extensions.PrintReport(
+                [
+                    "epoch",
+                    "main/loss",
+                    "validation/main/loss",
+                    "main/accuracy",
+                    "validation/main/accuracy",
+                    "elapsed_time",
+                ]
+            )
+        )
         trainer.extend(extensions.ProgressBar())
 
     trainer.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

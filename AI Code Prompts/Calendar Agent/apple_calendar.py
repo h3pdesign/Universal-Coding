@@ -5,6 +5,7 @@ from Foundation import NSDate
 from EventKit import EKEventStore, EKEntityTypeEvent
 import asyncio
 
+
 class AppleCalendar:
     def __init__(self, calendar_name="hp"):
         self.store = EKEventStore.alloc().init()

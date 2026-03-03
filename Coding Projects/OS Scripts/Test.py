@@ -1,1 +1,1 @@
-print ("Hi its me the photographer")
+print("Hi its me the photographer")

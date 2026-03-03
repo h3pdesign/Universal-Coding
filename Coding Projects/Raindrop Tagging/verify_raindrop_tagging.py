@@ -1,4 +1,3 @@
-
 # Raindrop API version
 import os
 import sys
@@ -25,6 +24,7 @@ if not RAINDROP_API_TOKEN:
 HEADERS = {"Authorization": f"Bearer {RAINDROP_API_TOKEN}"}
 RAINDROP_API_URL = "https://api.raindrop.io/rest/v1/raindrops/0"
 
+
 def fetch_all_raindrops():
     """
     Fetch all Raindrop articles with pagination.
@@ -50,6 +50,7 @@ def fetch_all_raindrops():
             break
     return raindrops
 
+
 def verify_tags(raindrops):
     """
     Verify each raindrop has at least 3 tags.
@@ -72,6 +73,7 @@ def verify_tags(raindrops):
     valid_count = total - len(invalid_raindrops)
     return total, valid_count, invalid_raindrops
 
+
 def main():
     logging.info("Starting verification of Raindrop tagging...")
     raindrops = fetch_all_raindrops()
@@ -93,6 +95,7 @@ def main():
             )
     else:
         print("\nAll raindrops have 3 or more tags.")
+
 
 if __name__ == "__main__":
     main()
