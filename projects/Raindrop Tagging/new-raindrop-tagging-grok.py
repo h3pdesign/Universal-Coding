@@ -1,49 +1,34 @@
-import os
-import time
 import logging
+import os
 import sys
-import requests
-from typing import Dict, List, Optional, Any
-from dotenv import load_dotenv
-from collections import defaultdict
-import json
+import time
+from typing import Any, Dict, List
 
-# Configure logging with file and stderr handlers
+import requests
+from dotenv import load_dotenv
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler("raindrop_tagging.log")
-file_handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-)
-logger.addHandler(file_handler)
+if not logger.handlers:
+    file_handler = logging.FileHandler("raindrop_tagging.log")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logger.addHandler(file_handler)
 
-stream_handler = logging.StreamHandler(sys.stderr)
-stream_handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-)
-logger.addHandler(stream_handler)
+    stream_handler = logging.StreamHandler(sys.stderr)
+    stream_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logger.addHandler(stream_handler)
 
-logging.info("Logging initialized")
-
-# Load environment variables
-env_path = os.path.join(os.path.dirname(__file__), ".env")
-load_dotenv(env_path)
-logging.info(f"Loaded .env from: {env_path}")
-
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 RAINDROP_API_TOKEN = os.getenv("RAINDROP_API_TOKEN")
-GROK_API_KEY = os.getenv("GROK_API_KEY")  # For tag generation only
+GROK_API_KEY = os.getenv("GROK_API_KEY")
 
 if not RAINDROP_API_TOKEN:
-    logging.error("Missing RAINDROP_API_TOKEN in .env file.")
     raise ValueError("Missing RAINDROP_API_TOKEN in .env file.")
 
-# --- Raindrop API helpers ---
-
-RAINDROP_API_URL = "https://api.raindrop.io/rest/v1/raindrops/0"  # 0 = all collections
-RAINDROP_UPDATE_URL = "https://api.raindrop.io/rest/v1/raindrop/"  # + id
-
+RAINDROP_API_URL = "https://api.raindrop.io/rest/v1/raindrops/0"
+RAINDROP_UPDATE_URL = "https://api.raindrop.io/rest/v1/raindrop/"
 HEADERS = {
     "Authorization": f"Bearer {RAINDROP_API_TOKEN}",
     "Content-Type": "application/json",
@@ -51,362 +36,204 @@ HEADERS = {
 
 
 def fetch_raindrops_to_tag() -> Dict[int, Dict[str, Any]]:
-    """
-    Fetch Raindrop articles with fewer than 3 tags.
-
-    Returns:
-        Dict[int, Dict[str, Any]]: Dictionary of raindrop IDs to raindrop data for items with < 3 tags
-<<<<<<< HEAD
-=======
-    """
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-    logging.info("Fetching Raindrop articles with fewer than 3 tags...")
+    """Fetch Raindrop items that currently have fewer than 3 tags."""
+    logger.info("Fetching Raindrop items with fewer than 3 tags...")
     all_raindrops: Dict[int, Dict[str, Any]] = {}
     page = 0
+
     while True:
         params = {"perpage": 50, "page": page}
         try:
             response = requests.get(RAINDROP_API_URL, headers=HEADERS, params=params, timeout=20)
             response.raise_for_status()
             data = response.json()
-<<<<<<< HEAD
-            for item in data.get("items", []):
-                tags = item.get("tags", [])
-                if len(tags) < 3:
-                    all_raindrops[item["_id"]] = item
-            if not data.get("items") or len(data["items"]) < 50:
-=======
             items = data.get("items", [])
+
             for item in items:
                 tags = item.get("tags", [])
                 if len(tags) < 3:
                     all_raindrops[item["_id"]] = item
+
             if not items or len(items) < 50:
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
                 break
+
             page += 1
             time.sleep(1)
-        except Exception as e:
-            logging.error(f"Error fetching Raindrop articles: {str(e)}")
+        except Exception as exc:
+            logger.error("Error fetching Raindrops: %s", exc)
             break
-    logging.info(f"Fetched {len(all_raindrops)} raindrops needing tags.")
+
+    logger.info("Fetched %s raindrops needing tags.", len(all_raindrops))
     return all_raindrops
 
 
 def update_raindrop_tags(raindrop: Dict[str, Any], new_tags: List[str]) -> bool:
-    """
-    Update tags for a Raindrop article using the update endpoint.
-
-    Args:
-        raindrop: The raindrop data dictionary from Raindrop API
-        new_tags: List of tags to apply to the raindrop
-
-    Returns:
-        bool: True if update was successful, False otherwise
-    """
+    """Update the tags for one Raindrop item."""
     raindrop_id = raindrop.get("_id")
     if not raindrop_id:
-        logging.warning(f"Raindrop missing _id, skipping.")
+        logger.warning("Raindrop missing _id, skipping.")
         return False
 
-    payload = {
-        "tags": new_tags,
-    }
-
+    payload = {"tags": new_tags}
     try:
         response = requests.put(
-            RAINDROP_UPDATE_URL + str(raindrop_id), headers=HEADERS, json=payload, timeout=20
+            f"{RAINDROP_UPDATE_URL}{raindrop_id}",
+            headers=HEADERS,
+            json=payload,
+            timeout=20,
         )
         if response.status_code in (200, 201):
-            logging.info(f"Updated tags for raindrop {raindrop_id}: {new_tags}")
+            logger.info("Updated tags for raindrop %s: %s", raindrop_id, new_tags)
             return True
-        else:
-            logging.error(
-                f"Failed to update tags for raindrop {raindrop_id}: {response.status_code} {response.text}"
-            )
-            return False
 
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Exception updating tags for raindrop {raindrop_id}: {str(e)}")
+        logger.error(
+            "Failed to update tags for raindrop %s: %s %s",
+            raindrop_id,
+            response.status_code,
+            response.text,
+        )
+        return False
+    except requests.exceptions.RequestException as exc:
+        logger.error("Exception updating tags for raindrop %s: %s", raindrop_id, exc)
         return False
 
 
-# --- Tag Generation (Grok or fallback) ---
 def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
-    """
-    Generate tags using xAI Grok API based on article content.
-<<<<<<< HEAD
-    Falls back to simulation on API failure.
-=======
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
+    """Request tags from the Grok API and fall back to basic keyword tags if needed."""
+    content = f"{title} {excerpt}".strip()
+    if not GROK_API_KEY:
+        logger.error("GROK_API_KEY not found; using fallback tags only.")
+        return generate_fallback_tags(content)
 
-    Args:
-        title: Article title
-        excerpt: Article excerpt or summary
-        url: Article URL
+    try:
+        endpoint = "https://api.xai.com/v1/generate"
+        headers = {
+            "Authorization": f"Bearer {GROK_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "grok-4-fast-reasoning",
+            "prompt": f"Generate up to 3 relevant tags for the article: {content[:500]}...",
+            "max_tokens": 60,
+            "temperature": 0.3,
+        }
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
 
-    Returns:
-<<<<<<< HEAD
-        List[str]: List of generated tags (at least 3)
-=======
-        List[str]: List of generated tags (may be empty if Grok couldn't be used)
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-    """
-    content = f"{title} {excerpt}"
-    tags: List[str] = []
-    grok_api_key = GROK_API_KEY
+        generated_text = ""
+        choices = data.get("choices")
+        if isinstance(choices, list) and choices:
+            first = choices[0]
+            if isinstance(first, dict):
+                generated_text = first.get("text") or first.get("message", {}).get("content") or ""
 
-    if grok_api_key:
-        try:
-            endpoint = "https://api.xai.com/v1/generate"
-            headers = {
-                "Authorization": f"Bearer {grok_api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "model": "grok-4-fast-reasoning",
-                "prompt": f"Generate up to 3 relevant tags for the following article content: {content[:500]}...",
-                "max_tokens": 60,
-                "temperature": 0.3,
-            }
-            response = requests.post(
-                endpoint, json=payload, headers=headers, timeout=10
-            )
-            response.raise_for_status()
-            data = response.json()
-            # Robust parsing: support both 'choices' and 'output' shapes and direct text
-            generated_text = ""
-            if isinstance(data.get("choices"), list) and data["choices"]:
-<<<<<<< HEAD
-                # Newer shapes may contain 'message' or 'content'
-                first = data["choices"][0]
-                if isinstance(first, dict):
-                    generated_text = (
-                        first.get("text") or first.get("message", {}).get("content") or ""
-                    )
-            if not generated_text and isinstance(data.get("output"), list):
-                # Some xAI responses use an 'output' array with 'content'
-=======
-                first = data["choices"][0]
-                if isinstance(first, dict):
-                    generated_text = first.get("text") or first.get("message", {}).get("content") or ""
-            if not generated_text and isinstance(data.get("output"), list):
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-                parts = []
-                for o in data["output"]:
-                    if isinstance(o, dict):
-                        parts.append(o.get("content", ""))
-                    elif isinstance(o, str):
-                        parts.append(o)
-                generated_text = "\n".join(p for p in parts if p)
-            if not generated_text:
-<<<<<<< HEAD
-                # Fallback: check top-level text
-=======
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-                generated_text = data.get("text", "") or data.get("result", "")
+        if not generated_text and isinstance(data.get("output"), list):
+            parts = []
+            for item in data["output"]:
+                if isinstance(item, dict):
+                    parts.append(item.get("content", ""))
+                elif isinstance(item, str):
+                    parts.append(item)
+            generated_text = "\n".join(part for part in parts if part)
 
-            generated_text = (generated_text or "").strip()
-            # Split by commas or newlines and strip
-<<<<<<< HEAD
-            tags = [tag.strip() for part in generated_text.splitlines() for tag in part.split(",") for tag in [tag.strip()] if tag]
-=======
-            tags = [
-                tag.strip()
-                for part in generated_text.splitlines()
-                for tag in part.split(",")
-                if (tag and tag.strip())
-            ]
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
+        if not generated_text:
+            generated_text = data.get("text", "") or data.get("result", "")
 
-            if not tags:
-                logging.warning(f"No tags generated by Grok API for '{title}'.")
-            else:
-                logging.info(f"Grok API generated tags for '{title}': {tags}")
+        generated_text = (generated_text or "").strip()
+        tags = [tag.strip() for part in generated_text.splitlines() for tag in part.split(",") if tag.strip()]
 
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Grok API call failed for '{title}': {str(e)}")
-<<<<<<< HEAD
-=======
-            logging.error("Grok unavailable for this item; skipping tag generation.")
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-            time.sleep(1)
-    else:
-        logging.error(
-            "GROK_API_KEY not found in environment variables. Cannot generate tags without Grok."
-        )
+        if tags:
+            logger.info("Grok returned tags for '%s': %s", title, tags)
+            return tags[:3]
 
-<<<<<<< HEAD
-    # If tags couldn't be generated via Grok, return empty list and log a clear message
-=======
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-    if not tags:
-        logging.error(f"No tags generated for '{title}'. Grok unavailable or failed. Skipping tagging for this item.")
-        return []
-
-    return tags
+        logger.warning("Grok returned no tags for '%s'; using fallback tags.", title)
+        return generate_fallback_tags(content)
+    except requests.exceptions.RequestException as exc:
+        logger.error("Grok request failed for '%s': %s", title, exc)
+        return generate_fallback_tags(content)
 
 
 def generate_fallback_tags(content: str) -> List[str]:
-    """
-    Generate tags based on content keywords when API fails.
-
-    Args:
-        content: The article content (title + excerpt)
-
-    Returns:
-        List[str]: List of generated tags (at least 3)
-    """
+    """Create simple keyword-based tags if the API is unavailable."""
     content_lower = content.lower()
-    general_tags: Set[str] = set()
-    specific_tag = ""
+    general_tags: List[str] = []
 
-    # Determine general tags based on content keywords
-    if any(
-<<<<<<< HEAD
-            def generate_tags_with_grok(title: str, excerpt: str, url: str) -> List[str]:
-                """
-                Generate tags using xAI Grok API based on article content.
-                If Grok is unavailable or the API call fails, returns an empty list and logs an error.
-
-                Args:
-                    title: Article title
-                    excerpt: Article excerpt or summary
-                    url: Article URL
-
-                Returns:
-                    List[str]: List of generated tags (may be empty if Grok couldn't be used)
-                """
-=======
-        word in content_lower for word in ["technology", "software", "ai", "artificial intelligence", "computer"]
-    ):
-        general_tags.update(["technology", "software"])
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
-    elif any(
-        word in content_lower for word in ["finance", "economy", "money", "market"]
-    ):
-        general_tags.update(["finance", "economy"])
-    elif any(
-        word in content_lower
-        for word in ["education", "learning", "school", "university"]
-    ):
-        general_tags.update(["education", "learning"])
-    elif any(
-        word in content_lower for word in ["entertainment", "movie", "music", "game"]
-    ):
-        general_tags.update(["entertainment", "media"])
+    if any(word in content_lower for word in ["technology", "software", "ai", "artificial intelligence", "computer"]):
+        general_tags.extend(["technology", "software"])
+    elif any(word in content_lower for word in ["finance", "economy", "money", "market"]):
+        general_tags.extend(["finance", "economy"])
+    elif any(word in content_lower for word in ["education", "learning", "school", "university"]):
+        general_tags.extend(["education", "learning"])
+    elif any(word in content_lower for word in ["entertainment", "movie", "music", "game"]):
+        general_tags.extend(["entertainment", "media"])
     else:
-        general_tags.update(["information", "content"])
+        general_tags.extend(["information", "content"])
 
-    # Determine a specific, multi-word tag
-    if "ai" in content_lower or "artificial intelligence" in content_lower:
+    if any(word in content_lower for word in ["ai", "artificial intelligence"]):
         specific_tag = "artificial intelligence"
-    elif "climate" in content_lower or "environment" in content_lower:
+    elif any(word in content_lower for word in ["climate", "environment"]):
         specific_tag = "climate change"
-    elif "design" in content_lower or "apple" in content_lower:
+    elif any(word in content_lower for word in ["design", "apple"]):
         specific_tag = "product design"
-    elif "healthcare" in content_lower or "hospital" in content_lower:
+    elif any(word in content_lower for word in ["healthcare", "hospital"]):
         specific_tag = "healthcare industry"
-    elif "stock" in content_lower or "investment" in content_lower:
+    elif any(word in content_lower for word in ["stock", "investment"]):
         specific_tag = "financial markets"
     elif "student" in content_lower:
         specific_tag = "educational resources"
-    elif "movie" in content_lower or "film" in content_lower:
+    elif any(word in content_lower for word in ["movie", "film"]):
         specific_tag = "film industry"
     else:
         specific_tag = "relevant subject"
 
-    tags = list(general_tags)[:2] + [specific_tag]
-    tags = list(set(tags))  # Remove duplicates
-
-    # Ensure we have at least 3 tags
+    tags = list(dict.fromkeys(general_tags[:2] + [specific_tag]))
     while len(tags) < 3:
-        fallback_tags = ["other content", "miscellaneous", "general topic"]
-        for ft in fallback_tags:
-            if ft not in tags and len(tags) < 3:
-                tags.append(ft)
-
+        tags.append("content")
     return tags
 
 
 def tag_raindrops(raindrops: Dict[int, Dict[str, Any]]) -> int:
-    """
-    Tag Raindrop articles with at least 3 tags: 2 general (one-word), 1 specific (multi-word).
-
-    Args:
-        raindrops: Dictionary of raindrop IDs to raindrop data
-
-    Returns:
-        int: Count of successfully tagged raindrops
-    """
+    """Tag each Raindrop item with a unique set of tags."""
     tagged_count = 0
-
     for raindrop_id, raindrop in raindrops.items():
-        current_tags = raindrop.get("tags", [])
-<<<<<<< HEAD
-                # If tags couldn't be generated via Grok, return empty list and log a clear message
-            continue
-
-=======
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
+        current_tags = raindrop.get("tags", []) or []
         title = raindrop.get("title", "")
         excerpt = raindrop.get("excerpt", "")
-
-        logging.info(f"Processing raindrop {raindrop_id}: {title}")
+        logger.info("Processing raindrop %s: %s", raindrop_id, title)
 
         new_tags = generate_tags_with_grok(title, excerpt, raindrop.get("link", ""))
-
-<<<<<<< HEAD
-        # Merge with existing tags, ensure at least 3 unique
-        final_tags = list(set(current_tags + new_tags))
-=======
-        # If Grok couldn't be used or returned no tags, skip and log
-        if not new_tags:
-            logging.error(f"Grok unavailable or returned no tags for '{title}'. Skipping this item.")
-            continue
-
-        # Merge with existing tags, preserve order and ensure uniqueness
         final_tags = list(dict.fromkeys((current_tags or []) + new_tags))
->>>>>>> 4949755 (Implement Readwise tagging with local and Azure Data Lake storage integration; add scripts for filtering Pocket data, verifying Raindrop tagging, and updating Python dependencies; enhance error handling and logging throughout the project.)
         while len(final_tags) < 3:
             final_tags.append("content")
 
-        # Update tags on Raindrop
         if update_raindrop_tags(raindrop, final_tags):
             tagged_count += 1
 
-        time.sleep(1)  # Rate limiting
+        time.sleep(1)
 
-    logging.info(f"Tagged {tagged_count} raindrops.")
+    logger.info("Tagged %s raindrops.", tagged_count)
     return tagged_count
 
 
 def main() -> None:
-    """Main function to run the Raindrop tagging process."""
     try:
-        logging.info("Script started")
-
-        # Fetch raindrops to tag
+        logger.info("Script started")
         raindrops = fetch_raindrops_to_tag()
         if not raindrops:
-            logging.warning("No raindrops with fewer than 3 tags found.")
-            print("No raindrops need tagging. Verify your Raindrop account.")
+            logger.warning("No raindrops need tagging.")
+            print("No raindrops need tagging.")
             return
 
-        # Tag raindrops
         tagged_count = tag_raindrops(raindrops)
-        print(f"Tagged {tagged_count} raindrops with at least 3 tags each.")
-
-        logging.info("Script finished")
-        print("Script finished")
-
+        print(f"Tagged {tagged_count} raindrops.")
+        logger.info("Script finished")
     except KeyboardInterrupt:
-        logging.info("Script interrupted by user")
-        print("Script stopped by user")
+        logger.info("Script interrupted by user")
         sys.exit(0)
-    except Exception as e:
-        logging.error(f"Unexpected error: {str(e)}")
-        print(f"Error: {str(e)}")
+    except Exception as exc:
+        logger.error("Unexpected error: %s", exc)
+        print(f"Error: {exc}")
         sys.exit(1)
 
 
