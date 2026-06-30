@@ -28,6 +28,7 @@ HEADERS = {"Authorization": f"Bearer {RAINDROP_TOKEN}"}
 # Grok client (xAI API is OpenAI compatible)
 grok_client = OpenAI(api_key=XAI_API_KEY, base_url="https://api.x.ai/v1")
 
+
 # Apple Intelligence bridge (optional, macOS only)
 def get_apple_tags(text: str):
     try:
@@ -43,17 +44,19 @@ def get_apple_tags(text: str):
         print(f"Apple Intelligence not available ({e}), skipping local model.")
     return []
 
+
 # === Functions ===
 def fetch_untagged_articles():
     url = f"{RAINDROP_API}/raindrops/0"  # Collection 0 = all
     params = {
         "search": '[tag:""] type:article',  # Only untagged articles
         "perpage": MAX_ARTICLES,
-        "sort": "-created"
+        "sort": "-created",
     }
     r = requests.get(url, headers=HEADERS, params=params)
     r.raise_for_status()
     return r.json().get("items", [])
+
 
 def generate_grok_tags(title: str, excerpt: str):
     prompt = f"""
@@ -77,12 +80,16 @@ def generate_grok_tags(title: str, excerpt: str):
         print(f"Grok error: {e}")
         return []
 
+
 def apply_tags(raindrop_id: int, tags: list):
     url = f"{RAINDROP_API}/raindrop/{raindrop_id}"
     payload = {"tags": list(set(tags))}  # deduplicate
-    r = requests.put(url, headers={**HEADERS, "Content-Type": "application/json"}, json=payload)
+    r = requests.put(
+        url, headers={**HEADERS, "Content-Type": "application/json"}, json=payload
+    )
     r.raise_for_status()
     print(f"Applied → {', '.join(tags)}")
+
 
 # === Main ===
 def main():
@@ -114,6 +121,7 @@ def main():
             apply_tags(rid, final_tags)
         else:
             print("   No tags generated, skipping.")
+
 
 if __name__ == "__main__":
     main()

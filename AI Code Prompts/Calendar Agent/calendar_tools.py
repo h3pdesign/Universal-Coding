@@ -1,5 +1,6 @@
 # calendar_tools.py
 
+
 def categorize(event):
     title = event.get("title", "").lower()
     if "meeting" in title:
@@ -13,8 +14,10 @@ def categorize(event):
     else:
         return "General"
 
+
 def write_brief(event):
     return f"{event['title']} from {event['start']} to {event['end']}"
+
 
 def summarize_events(events):
     summary = "Weekly Calendar Summary:\n"

@@ -179,7 +179,9 @@ def fetch_raindrops_to_tag() -> Dict[int, Dict[str, Any]]:
     while True:
         params = {"perpage": 50, "page": page}
         try:
-            response = requests.get(RAINDROP_API_URL, headers=HEADERS, params=params, timeout=20)
+            response = requests.get(
+                RAINDROP_API_URL, headers=HEADERS, params=params, timeout=20
+            )
             response.raise_for_status()
             data = response.json()
             for item in data.get("items", []):
@@ -223,7 +225,10 @@ def update_raindrop_tags(raindrop: Dict[str, Any], new_tags: List[str]) -> bool:
 
     try:
         response = requests.put(
-            RAINDROP_UPDATE_URL + str(raindrop_id), headers=HEADERS, json=payload, timeout=20
+            RAINDROP_UPDATE_URL + str(raindrop_id),
+            headers=HEADERS,
+            json=payload,
+            timeout=20,
         )
         if response.status_code in (200, 201):
             logging.info(f"Updated tags for raindrop {raindrop_id}: {new_tags}")

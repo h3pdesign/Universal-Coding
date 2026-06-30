@@ -1,4 +1,3 @@
-
 # %%# Our data
 import matplotlib.pyplot as plt
 

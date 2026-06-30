@@ -13,7 +13,7 @@ def init():
     global model
     # note here "sklearn_regression_model.pkl" is the name of the model registered under
     # this is a different behavior than before when the code is run locally, even though the code is the same.
-    model_path = Model.get_model_path('sklearn_regression_model.pkl')
+    model_path = Model.get_model_path("sklearn_regression_model.pkl")
     # deserialize the model file back into a sklearn model
     model = joblib.load(model_path)
 
@@ -22,7 +22,7 @@ input_sample = np.array([[10, 9, 8, 7, 6, 5, 4, 3, 2, 1]])
 output_sample = np.array([3726.995])
 
 
-@input_schema('data', NumpyParameterType(input_sample))
+@input_schema("data", NumpyParameterType(input_sample))
 @output_schema(NumpyParameterType(output_sample))
 def run(data):
     try:

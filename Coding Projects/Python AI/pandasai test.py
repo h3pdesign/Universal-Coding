@@ -15,15 +15,15 @@ from pandasai.llm.falcon import Falcon
 from pandasai.llm.google_palm import GooglePalm
 
 # GooglePalm
-#llm = GooglePalm(api_token="YOUR_Google_API_KEY")
+# llm = GooglePalm(api_token="YOUR_Google_API_KEY")
 
 # Starcoder
-#llm = Starcoder(api_token="YOUR_HF_API_KEY")
+# llm = Starcoder(api_token="YOUR_HF_API_KEY")
 
 # Falcon
-#llm = Falcon(api_token="YOUR_HF_API_KEY")
+# llm = Falcon(api_token="YOUR_HF_API_KEY")
 
-#%%
+# %%
 
 import pandas as pd
 

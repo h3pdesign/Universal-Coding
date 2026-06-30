@@ -1,7 +1,7 @@
 from pandas import DataFrame
 from lxml import objectify
 
-path = 'Performance_MNR.xml'
+path = "Performance_MNR.xml"
 parsed = objectify.parse(open(path))
 root = parsed.getroot()
 

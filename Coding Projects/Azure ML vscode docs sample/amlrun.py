@@ -1,6 +1,7 @@
 import azureml
 from azureml.core import Run
 
+
 # Access the Azure ML run
 # Init run param to check if running within AML
 def get_AMLRun():
